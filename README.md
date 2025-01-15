@@ -4,6 +4,8 @@
 
 > **Disclaimer**: This is not an official application of the Ideogram API. It is an independent project created to simplify API usage.
 
+
+![IDEOGRAM-API-UI](img/ideogram_api_ui.jpg)
 ---
 
 ## Features

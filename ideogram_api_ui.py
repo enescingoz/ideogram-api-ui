@@ -1,7 +1,6 @@
 # Name: Enes Cingoz
 # GitHub: https://github.com/enescingoz
 
-
 import sys
 import os
 import json
@@ -11,7 +10,11 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QLabel, QComboBox, QTextEdit,
     QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLineEdit, QScrollArea
 )
+from PyQt5.QtGui import QPixmap
+
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
+from io import BytesIO
 
 class FuturisticUI(QMainWindow):
     def __init__(self):
@@ -82,6 +85,23 @@ class FuturisticUI(QMainWindow):
         submit_button.clicked.connect(self.send_request)
         main_layout.addWidget(submit_button)
 
+        # Image Display Section
+        self.image_label = QLabel("Image Output:")
+        self.image_label.setStyleSheet("font-weight: bold; font-size: 16px;")
+        self.image_display = QLabel(self)
+        self.image_display.setMinimumHeight(600)
+        self.image_display.setStyleSheet("background-color: #2e2e4e; border: 1px solid #c0caf5;")
+        self.image_display.setAlignment(Qt.AlignCenter)
+        main_layout.addWidget(self.image_label)
+        main_layout.addWidget(self.image_display)
+
+        # Download Button
+        self.download_button = QPushButton("Download Image", self)
+        self.download_button.setStyleSheet("background-color: #414868; border-radius: 5px; padding: 10px; font-size: 16px;")
+        self.download_button.clicked.connect(self.download_image)
+        self.download_button.setEnabled(False)
+        main_layout.addWidget(self.download_button)
+
         # Console Output
         self.console = QScrollArea(self)
         self.console.setWidgetResizable(True)
@@ -96,6 +116,8 @@ class FuturisticUI(QMainWindow):
         container = QWidget()
         container.setLayout(main_layout)
         self.setCentralWidget(container)
+
+        self.current_image_url = None
 
     def load_api_key(self):
         if os.path.exists("api_key.txt"):
@@ -144,10 +166,40 @@ class FuturisticUI(QMainWindow):
                     f"Image Safe: {first_result['is_image_safe']}\n"
                 )
                 self.log_to_console(details)
+
+                # Load and display the image
+                image_url = first_result['url']
+                self.display_image(image_url)
+                self.current_image_url = image_url
+                self.download_button.setEnabled(True)
             else:
                 self.log_to_console("No data in response.")
         except Exception as e:
             self.log_to_console(f"Error: {str(e)}")
+
+    def display_image(self, image_url):
+        try:
+            response = requests.get(image_url)
+            pixmap = QPixmap()
+            pixmap.loadFromData(BytesIO(response.content).read())
+            self.image_display.setPixmap(pixmap.scaled(self.image_display.width(), 600, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        except Exception as e:
+            self.log_to_console(f"Error displaying image: {str(e)}")
+
+    def download_image(self):
+        if not self.current_image_url:
+            self.log_to_console("No image URL available for download.")
+            return
+
+        try:
+            response = requests.get(self.current_image_url)
+            os.makedirs("output", exist_ok=True)
+            file_name = os.path.join("output", "downloaded_image.png")
+            with open(file_name, "wb") as file:
+                file.write(response.content)
+            self.log_to_console(f"Image downloaded and saved to {file_name}")
+        except Exception as e:
+            self.log_to_console(f"Error downloading image: {str(e)}")
 
     def log_to_console(self, message):
         self.console_widget.append(message)
